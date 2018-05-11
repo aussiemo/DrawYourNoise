@@ -6,12 +6,21 @@
 #include <string>
 #include <iostream>
 #include <array>
+#include <cmath>
+#include <cassert>
 
 ALuint sources[2];
 ALuint buffers[2];
 const int samplingFrequency = 8000;
+bool doLog = true;
+std::string generator = "squareWave";
+
 
 void printError(const ALenum &error, const std::string &context = "default") {
+	if (!doLog) {
+		return;
+	}
+	
 	std::string errorText;
 	switch (error) {
 		case AL_NO_ERROR:
@@ -38,44 +47,64 @@ void printError(const ALenum &error, const std::string &context = "default") {
 	std::cout << "[" << context << "] Error: " << errorText << "(" << error << ")" <<  std::endl;
 }
 
+ALubyte computeSampleValueSquareWave(const int &sample, const int &samplingFrequency,
+										const float &signalFrequency) {
+	constexpr ALubyte hi = 192;
+	constexpr ALubyte lo = 64;
+	
+	const int stride = samplingFrequency / signalFrequency;
+	
+	return (sample / stride) % 2 ? lo : hi;
+}
+
+ALubyte computeSampleValueSawtoothWave(const int &sample, const int &samplingFrequency,
+										const float &signalFrequency) {
+	const float t = (float)sample / (float)samplingFrequency;
+	const float a = 1.0 / signalFrequency;
+	
+	return (ALubyte) ((2.0f * (t/a - std::floor(0.5f + t/a)) + 1.0f) / 2.0f * 255.0f);
+}
+
+ALubyte computeSampleValueSineWave(const int &sample, const int &samplingFrequency,
+										const float &signalFrequency) {
+	const float t = (float)sample / (float)samplingFrequency;
+	return (ALubyte) ((std::sin(2.0f*M_PI*(float)signalFrequency*t) + 1.0f) / 2.0f * 255.0f);
+}
+
+ALubyte computeSampleValue(const int &sample, const int &sampleFrequency, 
+							const float &signalFrequency, const std::string &method="squareWave") {
+	if (method == "squareWave") {
+		return computeSampleValueSquareWave(sample, sampleFrequency, signalFrequency);
+	} else if (method == "sawtoothWave") {
+		return computeSampleValueSawtoothWave(sample, sampleFrequency, signalFrequency);
+	} else {
+		return computeSampleValueSineWave(sample, sampleFrequency, signalFrequency);
+	}
+}
+
+
+// TODO(mja): Why is alBufferdata sometimes generating AL_INVALID_OPERATION after recompile on OSX? 
 void playNote(char note, int duration) {
-	// c = 261,626
-	// d = 293,665
-	// e = 329,628
-	// f = 349,228
-	// g = 391,995
-	// a = 440,000
-	
-	const int C = samplingFrequency / 261.626;
-	const int D = samplingFrequency / 293.665;
-	const int E = samplingFrequency / 329.628;
-	const int F = samplingFrequency / 349.228;
-	const int G = samplingFrequency / 391.995;
-	const int A = samplingFrequency / 440.000;
-	
-	std::map<char, int> strideForNote{{'c',C}, {'d',D}, {'e',E}, {'f',F}, {'g', G}, {'a',A}};
-	
-	
-	//ALubyte data[1000];
+	const float C = 261.626;
+	const float D = 293.665;
+	const float E = 329.628;
+	const float F = 349.228;
+	const float G = 391.995;
+	const float A = 440.000;
+
+	std::map<char, float> frequencyForNote{{'c',C}, {'d',D}, {'e',E}, {'f',F}, {'g', G}, {'a',A}};
+
 	std::array<ALubyte, samplingFrequency> data;
-	const ALubyte hi = 192;
-	const ALubyte lo = 64;
-	ALubyte cu = lo; // current level 
-	
-	int stride = strideForNote[note];
-	
-	for (int i = 0; i < samplingFrequency; ++i) {
-		data[i] = cu;
-		--stride;
-		//std::cout << cu << " | " << stride << std::endl;
-		if (stride == 0) {
-			stride = strideForNote[note];
-			cu = cu == hi ? lo : hi;
-		}
+	auto signalFrequency = frequencyForNote[note];
+	for (int sample = 0; sample < samplingFrequency; ++sample) {
+		data[sample] = computeSampleValue(sample, samplingFrequency, signalFrequency, generator);
+		//std::cout << (int)data[sample] << std::endl;
+		
 	}
 	
 	alSourcei(sources[0], AL_BUFFER, 0);
 	printError(alGetError(), "PlayNote_DetachBuffers");
+	// std::this_thread::sleep_for(std::chrono::milliseconds(2));
 	
 	//alGetError();
 	alBufferData(buffers[0], 
@@ -98,6 +127,10 @@ void playNote(char note, int duration) {
 }
 
 int main(int argc, char* argv[]) {
+	if (argc == 2) {
+		generator = argv[1];
+	}
+	
 	alGetError();
 	
 	
@@ -121,6 +154,7 @@ int main(int argc, char* argv[]) {
 
 	// f f f f e e g g g g c
 	// 8 8 8 8 4 4 8 8 8 8 2
+	std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	playNote('c', 8);
 	playNote('d', 8);
 	playNote('e', 8);
