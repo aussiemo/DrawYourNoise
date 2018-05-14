@@ -147,7 +147,10 @@ struct Note {
 	float frequency;
 };
 
-// TODO(mja): Why is alBufferdata sometimes generating AL_INVALID_OPERATION after recompile on OSX? 
+// TODO(mja): Why is alBufferdata sometimes generating AL_INVALID_OPERATION after 
+//			  recompile on OSX?
+// NOTE(mja): Not used, but here so that clients do not have to deal with Note if they
+// 			  don't want to.
 void playNote(char noteName, int durationDivisor) {
 	Note note(noteName, durationDivisor);
 	playNote(note.frequency, note.durationDivisor);
@@ -188,13 +191,6 @@ int main(int argc, char* argv[]) {
 	// f f f f e e g g g g c
 	// 8 8 8 8 4 4 8 8 8 8 2
 	std::this_thread::sleep_for(std::chrono::milliseconds(5));
-	
-	playNote('c', 4);
-	playNote('c', 4);
-	playNote('d', 2);
-	playNote('c', 2);
-	playNote('c', 2);
-	
 	
 	std::vector<Note> alleMeineEntchen = {
 		Note('c', 8), Note('d', 8), Note('e', 8), Note('f', 8), Note('g', 4), Note('g', 4),
