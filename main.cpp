@@ -111,49 +111,6 @@ void playNote(const float &frequency, const int &durationDivisor) {
 	std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 
-// TODO(mja): Why is alBufferdata sometimes generating AL_INVALID_OPERATION after recompile on OSX? 
-void playNote(char note, int duration) {
-	const float C = 261.626;
-	const float D = 293.665;
-	const float E = 329.628;
-	const float F = 349.228;
-	const float G = 391.995;
-	const float A = 440.000;
-
-	std::map<char, float> frequencyForNote{{'c',C}, {'d',D}, {'e',E}, {'f',F}, {'g', G}, {'a',A}};
-
-	std::array<ALubyte, samplingFrequency> data;
-	auto signalFrequency = frequencyForNote[note];
-	for (int sample = 0; sample < samplingFrequency; ++sample) {
-		data[sample] = computeSampleValue(sample, samplingFrequency, signalFrequency, generator);
-		//std::cout << (int)data[sample] << std::endl;
-		
-	}
-	
-	alSourcei(sources[0], AL_BUFFER, 0);
-	printError(alGetError(), "PlayNote_DetachBuffers");
-	// std::this_thread::sleep_for(std::chrono::milliseconds(2));
-	
-	//alGetError();
-	alBufferData(buffers[0], 
-					AL_FORMAT_MONO8, 
-					(void*)&data, 
-					samplingFrequency,
-					samplingFrequency);
-	
-	auto error = alGetError();
-	printError(error, "PlayNote_BufferData");
-	
-	alSourcei(sources[0], AL_BUFFER, buffers[0]);
-	printError(alGetError(), "PlayNote_BindBuffer");
-	
-	alSourcePlay(sources[0]);
-	
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000 / duration));
-	alSourceStop(sources[0]);
-	std::this_thread::sleep_for(std::chrono::milliseconds(5));
-}
-
 struct Note {
 	Note(const char &name, const int &durationDivisor) : 
 		name(name),
@@ -190,6 +147,12 @@ struct Note {
 	float frequency;
 };
 
+// TODO(mja): Why is alBufferdata sometimes generating AL_INVALID_OPERATION after recompile on OSX? 
+void playNote(char noteName, int durationDivisor) {
+	Note note(noteName, durationDivisor);
+	playNote(note.frequency, note.durationDivisor);
+}
+
 void playNotes(const std::vector<Note> &notes) {
 	for (auto &note : notes) {
 		playNote(note.frequency, note.durationDivisor);
@@ -225,37 +188,13 @@ int main(int argc, char* argv[]) {
 	// f f f f e e g g g g c
 	// 8 8 8 8 4 4 8 8 8 8 2
 	std::this_thread::sleep_for(std::chrono::milliseconds(5));
-	playNote('c', 8);
-	playNote('d', 8);
-	playNote('e', 8);
-	playNote('f', 8);
-	playNote('g', 4);
-	playNote('g', 4);
 	
-	playNote('a', 8);
-	playNote('a', 8);
-	playNote('a', 8);
-	playNote('a', 8);
-	playNote('g', 2);
-	
-	playNote('a', 8);
-	playNote('a', 8);
-	playNote('a', 8);
-	playNote('a', 8);
-	playNote('g', 2);
-	
-	playNote('f', 8);
-	playNote('f', 8);
-	playNote('f', 8);
-	playNote('f', 8);
-	playNote('e', 4);
-	playNote('e', 4);
-	
-	playNote('g', 8);
-	playNote('g', 8);
-	playNote('g', 8);
-	playNote('g', 8);
+	playNote('c', 4);
+	playNote('c', 4);
+	playNote('d', 2);
 	playNote('c', 2);
+	playNote('c', 2);
+	
 	
 	std::vector<Note> alleMeineEntchen = {
 		Note('c', 8), Note('d', 8), Note('e', 8), Note('f', 8), Note('g', 4), Note('g', 4),
