@@ -185,11 +185,6 @@ int main(int argc, char* argv[]) {
 	alSourcei(sources[0], AL_LOOPING, AL_TRUE);
 	printError(alGetError());
 	
-	// c d e f g g a a a a g a a a a g
-	// 8 8 8 8 4 4 8 8 8 8 2 8 8 8 8 2
-
-	// f f f f e e g g g g c
-	// 8 8 8 8 4 4 8 8 8 8 2
 	std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	
 	std::vector<Note> alleMeineEntchen = {
