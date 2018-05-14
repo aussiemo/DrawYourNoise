@@ -126,6 +126,42 @@ void playNote(char note, int duration) {
 	std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 
+struct Note {
+	Note(const char &name, const int &durationDivisor) : 
+		name(name),
+		durationDivisor(durationDivisor),
+		frequency() 
+	{
+		switch (name) {
+			case 'c':
+				frequency = 261.626f;
+				break;
+			case 'd':
+				frequency = 293.665f;
+				break;
+			case 'e':
+				frequency = 329.628f;
+				break;
+			case 'f':
+				frequency = 349.228f;
+				break;
+			case 'g':
+				frequency = 391.995f;
+				break;
+			case 'a':
+				frequency = 440.000f;
+				break;
+			default:
+				// TODO(mja): throw
+				frequency = 440.000f;
+		}
+	}
+
+	char name;
+	int durationDivisor;
+	float frequency;
+};
+
 int main(int argc, char* argv[]) {
 	if (argc == 2) {
 		generator = argv[1];
