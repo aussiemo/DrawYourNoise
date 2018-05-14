@@ -8,6 +8,7 @@
 #include <array>
 #include <cmath>
 #include <cassert>
+#include <vector>
 
 ALuint sources[2];
 ALuint buffers[2];
@@ -82,6 +83,33 @@ ALubyte computeSampleValue(const int &sample, const int &sampleFrequency,
 	}
 }
 
+void playNote(const float &frequency, const int &durationDivisor) {
+	std::array<ALubyte, samplingFrequency> data;
+	auto signalFrequency = frequency;
+	for (int sample = 0; sample < samplingFrequency; ++sample) {
+		data[sample] = computeSampleValue(sample, samplingFrequency, signalFrequency, generator);
+	}
+	
+	alSourcei(sources[0], AL_BUFFER, 0);
+	printError(alGetError(), "PlayNote_DetachBuffers");
+	
+	alBufferData(buffers[0], 
+					AL_FORMAT_MONO8, 
+					(void*)&data, 
+					samplingFrequency,
+					samplingFrequency);
+	
+	printError(alGetError(), "PlayNote_BufferData");
+	
+	alSourcei(sources[0], AL_BUFFER, buffers[0]);
+	printError(alGetError(), "PlayNote_BindBuffer");
+	
+	alSourcePlay(sources[0]);
+	
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000 / durationDivisor));
+	alSourceStop(sources[0]);
+	std::this_thread::sleep_for(std::chrono::milliseconds(5));
+}
 
 // TODO(mja): Why is alBufferdata sometimes generating AL_INVALID_OPERATION after recompile on OSX? 
 void playNote(char note, int duration) {
@@ -162,6 +190,12 @@ struct Note {
 	float frequency;
 };
 
+void playNotes(const std::vector<Note> &notes) {
+	for (auto &note : notes) {
+		playNote(note.frequency, note.durationDivisor);
+	}
+}
+
 int main(int argc, char* argv[]) {
 	if (argc == 2) {
 		generator = argv[1];
@@ -222,7 +256,15 @@ int main(int argc, char* argv[]) {
 	playNote('g', 8);
 	playNote('g', 8);
 	playNote('c', 2);
-
+	
+	std::vector<Note> alleMeineEntchen = {
+		Note('c', 8), Note('d', 8), Note('e', 8), Note('f', 8), Note('g', 4), Note('g', 4),
+		Note('a', 8), Note('a', 8), Note('a', 8), Note('a', 8), Note('g', 2),
+		Note('a', 8), Note('a', 8), Note('a', 8), Note('a', 8), Note('g', 2),
+		Note('f', 8), Note('f', 8), Note('f', 8), Note('f', 8), Note('e', 4), Note('e', 4),
+		Note('g', 8), Note('g', 8), Note('g', 8), Note('g', 8), Note('c', 2)
+	};
+	playNotes(alleMeineEntchen);
 	
 	alcCloseDevice(device);
 	return 0;
