@@ -196,51 +196,73 @@ void tearDownOpenAl() {
 	
 }
 
+void playAlleMeineEntchen() {
+	// TODO(mja): Add command line toggle
+	std::vector<Note> alleMeineEntchen = {
+		Note('c', 8), Note('d', 8), Note('e', 8), Note('f', 8), Note('g', 4), Note('g', 4),
+		Note('a', 8), Note('a', 8), Note('a', 8), Note('a', 8), Note('g', 2),
+		Note('a', 8), Note('a', 8), Note('a', 8), Note('a', 8), Note('g', 2),
+		Note('f', 8), Note('f', 8), Note('f', 8), Note('f', 8), Note('e', 4), Note('e', 4),
+		Note('g', 8), Note('g', 8), Note('g', 8), Note('g', 8), Note('c', 2)
+	};
+	playNotes(alleMeineEntchen);
+}
+
 int main(int argc, char* argv[]) {
-	if (argc == 2) {
-		g_generator = argv[1];
+	// STUDY(mja): replace this epicness with proper command line parser
+	std::map<std::string, std::string> commandLineOptions;
+	std::string currentKey;
+	for (int i = 0; i < argc; ++i) {
+		std::string value = argv[i];
+		if (value.size() > 1 && value[0] == '-') {
+			currentKey = value;
+			commandLineOptions[currentKey] = "";
+		} else {
+			commandLineOptions[currentKey] = value;
+		}
+	}
+	
+	if (commandLineOptions.find("-generator") != commandLineOptions.end()) {
+		g_generator = commandLineOptions["-generator"];
 	}
 	
 	setupOpenAlDeviceWithOneSourceAndOneBuffer();
 	
-	// TODO(mja): Add command line toggle
-	// std::vector<Note> alleMeineEntchen = {
-	//	Note('c', 8), Note('d', 8), Note('e', 8), Note('f', 8), Note('g', 4), Note('g', 4),
-	//	Note('a', 8), Note('a', 8), Note('a', 8), Note('a', 8), Note('g', 2),
-	//	Note('a', 8), Note('a', 8), Note('a', 8), Note('a', 8), Note('g', 2),
-	//	Note('f', 8), Note('f', 8), Note('f', 8), Note('f', 8), Note('e', 4), Note('e', 4),
-	//	Note('g', 8), Note('g', 8), Note('g', 8), Note('g', 8), Note('c', 2)
-	//};
-	//playNotes(alleMeineEntchen);
+	if (commandLineOptions.find("-alleMeineEntchen") != commandLineOptions.end()) {
+		playAlleMeineEntchen();
+	}
 	
-	std::ifstream testFile("main.cpp", std::ios::binary|std::ios::ate);
-	auto bytesCount = testFile.tellg();
-	auto fileBytes = new ALubyte[bytesCount];
-	testFile.seekg(0, std::ios::beg);
-	testFile.read((char *)fileBytes, bytesCount);
-	
-	// TODO(mja): pull out function e.g.: play buffer; reuse in playNote
-	alSourcei(g_sources[0], AL_BUFFER, 0);
-	printError(alGetError(), "PlayNote_DetachBuffers");
-	
-	alBufferData(g_buffers[0], 
-					AL_FORMAT_MONO8, 
-					(void*)fileBytes, 
-					bytesCount,
-					g_samplingFrequency);
-	
-	printError(alGetError(), "PlayNote_BufferData");
-	
-	alSourcei(g_sources[0], AL_BUFFER, g_buffers[0]);
-	printError(alGetError(), "PlayNote_BindBuffer");
-	
-	alSourcePlay(g_sources[0]);
-	
-	std::this_thread::sleep_for(std::chrono::milliseconds(4000));
-	alSourceStop(g_sources[0]);
-	std::this_thread::sleep_for(std::chrono::milliseconds(5));
-	
-	delete[] fileBytes;
+	if (commandLineOptions.find("-playFile") != commandLineOptions.end()) {
+		auto fileName = commandLineOptions["-playFile"];
+		std::ifstream testFile(fileName, std::ios::binary|std::ios::ate);
+		auto bytesCount = testFile.tellg();
+		auto fileBytes = new ALubyte[bytesCount];
+		testFile.seekg(0, std::ios::beg);
+		testFile.read((char *)fileBytes, bytesCount);
+		
+		// TODO(mja): pull out function e.g.: play buffer; reuse in playNote
+		alSourcei(g_sources[0], AL_BUFFER, 0);
+		printError(alGetError(), "PlayNote_DetachBuffers");
+		
+		alBufferData(g_buffers[0], 
+						AL_FORMAT_MONO8, 
+						(void*)fileBytes, 
+						bytesCount,
+						g_samplingFrequency);
+		
+		printError(alGetError(), "PlayNote_BufferData");
+		
+		alSourcei(g_sources[0], AL_BUFFER, g_buffers[0]);
+		printError(alGetError(), "PlayNote_BindBuffer");
+		
+		alSourcePlay(g_sources[0]);
+		
+		std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+		alSourceStop(g_sources[0]);
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+		
+		delete[] fileBytes;
+	}
 	
 	tearDownOpenAl();
 	return 0;
