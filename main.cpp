@@ -10,15 +10,17 @@
 #include <cassert>
 #include <vector>
 
-ALuint sources[2];
-ALuint buffers[2];
-const int samplingFrequency = 8000;
-bool doLog = true;
-std::string generator = "squareWave";
+ALCdevice *g_device = nullptr;
+ALCcontext *g_context = nullptr;
+ALuint g_sources[2];
+ALuint g_buffers[2];
+const int g_samplingFrequency = 8000;
+bool g_doLog = true;
+std::string g_generator = "squareWave";
 
 
 void printError(const ALenum &error, const std::string &context = "default") {
-	if (!doLog) {
+	if (!g_doLog) {
 		return;
 	}
 	
@@ -84,30 +86,30 @@ ALubyte computeSampleValue(const int &sample, const int &sampleFrequency,
 }
 
 void playNote(const float &frequency, const int &durationDivisor) {
-	std::array<ALubyte, samplingFrequency> data;
+	std::array<ALubyte, g_samplingFrequency> data;
 	auto signalFrequency = frequency;
-	for (int sample = 0; sample < samplingFrequency; ++sample) {
-		data[sample] = computeSampleValue(sample, samplingFrequency, signalFrequency, generator);
+	for (int sample = 0; sample < g_samplingFrequency; ++sample) {
+		data[sample] = computeSampleValue(sample, g_samplingFrequency, signalFrequency, g_generator);
 	}
 	
-	alSourcei(sources[0], AL_BUFFER, 0);
+	alSourcei(g_sources[0], AL_BUFFER, 0);
 	printError(alGetError(), "PlayNote_DetachBuffers");
 	
-	alBufferData(buffers[0], 
+	alBufferData(g_buffers[0], 
 					AL_FORMAT_MONO8, 
 					(void*)&data, 
-					samplingFrequency,
-					samplingFrequency);
+					g_samplingFrequency,
+					g_samplingFrequency);
 	
 	printError(alGetError(), "PlayNote_BufferData");
 	
-	alSourcei(sources[0], AL_BUFFER, buffers[0]);
+	alSourcei(g_sources[0], AL_BUFFER, g_buffers[0]);
 	printError(alGetError(), "PlayNote_BindBuffer");
 	
-	alSourcePlay(sources[0]);
+	alSourcePlay(g_sources[0]);
 	
 	std::this_thread::sleep_for(std::chrono::milliseconds(1000 / durationDivisor));
-	alSourceStop(sources[0]);
+	alSourceStop(g_sources[0]);
 	std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 
@@ -149,6 +151,7 @@ struct Note {
 
 // TODO(mja): Why is alBufferdata sometimes generating AL_INVALID_OPERATION after 
 //			  recompile on OSX?
+//			  Maybe this is connected to alc-errors which are not handled properly yet.
 // NOTE(mja): Not used, but here so that clients do not have to deal with Note if they
 // 			  don't want to.
 void playNote(char noteName, int durationDivisor) {
@@ -162,30 +165,43 @@ void playNotes(const std::vector<Note> &notes) {
 	}
 }
 
-int main(int argc, char* argv[]) {
-	if (argc == 2) {
-		generator = argv[1];
-	}
-	
+void setupOpenAlDeviceWithOneSourceAndOneBuffer() {
 	alGetError();
 	
-	
-	auto device = alcOpenDevice(0);
-	auto context = alcCreateContext(device, 0);
-	alcMakeContextCurrent(context);
+	g_device = alcOpenDevice(0);
+	g_context = alcCreateContext(g_device, 0);
+	alcMakeContextCurrent(g_context);
 	printError(alGetError());
 
-	alGenBuffers(1, buffers);
+	alGenBuffers(1, g_buffers);
 	printError(alGetError());
 	
-	
-	alGenSources(1, sources);
+	alGenSources(1, g_sources);
 	printError(alGetError());
 	
-	alSourcei(sources[0], AL_LOOPING, AL_TRUE);
+	alSourcei(g_sources[0], AL_LOOPING, AL_TRUE);
 	printError(alGetError());
 	
 	std::this_thread::sleep_for(std::chrono::milliseconds(5));
+}
+
+void tearDownOpenAl() {
+	alcGetError(g_device);
+	
+	alcCloseDevice(g_device);
+	
+	// TODO(mja): printError is based on al-errorCodes, not on alc-errorCodes.
+	printError(alcGetError(g_device), "alcCloseDevice");
+	
+}
+
+int main(int argc, char* argv[]) {
+	if (argc == 2) {
+		g_generator = argv[1];
+	}
+	
+	setupOpenAlDeviceWithOneSourceAndOneBuffer();
+	
 	
 	std::vector<Note> alleMeineEntchen = {
 		Note('c', 8), Note('d', 8), Note('e', 8), Note('f', 8), Note('g', 4), Note('g', 4),
@@ -196,6 +212,6 @@ int main(int argc, char* argv[]) {
 	};
 	playNotes(alleMeineEntchen);
 	
-	alcCloseDevice(device);
+	tearDownOpenAl();
 	return 0;
 }
