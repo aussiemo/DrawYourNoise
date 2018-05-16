@@ -51,6 +51,37 @@ void printAlError(const ALenum &error, const std::string &context = "default") {
 	std::cout << "[" << context << "] Error: " << errorText << "(" << error << ")" <<  std::endl;
 }
 
+void printAlcError(const ALCenum &error, const std::string &context = "default") {
+	if (!g_doLog) {
+		return;
+	}
+	
+	std::string errorText;
+	switch (error) {
+		case ALC_NO_ERROR:
+			errorText = "ALC_NO_ERROR";
+			break;
+		case ALC_INVALID_DEVICE:
+			errorText = "ALC_INVALID_DEVICE";
+			break;
+		case ALC_INVALID_CONTEXT:
+			errorText = "ALC_INVALID_CONTEXT";
+			break;
+		case ALC_INVALID_ENUM:
+			errorText = "ALC_INVALID_ENUM";
+			break;
+		case ALC_INVALID_VALUE:
+			errorText = "ALC_INVALID_VALUE";
+			break;
+		case ALC_OUT_OF_MEMORY:
+			errorText = "ALC_OUT_OF_MEMORY";
+			break;
+		default:
+			errorText = "Unknown error";
+	}
+	std::cout << "[" << context << "] Error: " << errorText << "(" << error << ")" << std::endl; 
+}
+
 ALubyte computeSampleValueSquareWave(const int &sample, const int &samplingFrequency,
 										const float &signalFrequency) {
 	constexpr ALubyte hi = 192;
@@ -171,12 +202,12 @@ void playNotes(const std::vector<Note> &notes) {
 }
 
 void setupOpenAlDeviceWithOneSourceAndOneBuffer() {
-	alGetError();
+	alcGetError(g_device);
 	
 	g_device = alcOpenDevice(0);
 	g_context = alcCreateContext(g_device, 0);
 	alcMakeContextCurrent(g_context);
-	printAlError(alGetError());
+	printAlcError(alcGetError(g_device), "alcOpenDevice");
 
 	alGenBuffers(1, g_buffers);
 	printAlError(alGetError());
@@ -191,12 +222,14 @@ void setupOpenAlDeviceWithOneSourceAndOneBuffer() {
 }
 
 void tearDownOpenAl() {
-	alcGetError(g_device);
+	printAlcError(alcGetError(g_device), "alcCloseDevice_pre");
 	
-	alcCloseDevice(g_device);
+	ALCboolean closeSucceeded = alcCloseDevice(g_device);
+	if (!closeSucceeded) {
+		std::cout << "closing device failed";
+	}
 	
-	// TODO(mja): printAlError is based on al-errorCodes, not on alc-errorCodes.
-	printAlError(alcGetError(g_device), "alcCloseDevice");
+	printAlcError(alcGetError(g_device), "alcCloseDevice_post");
 	
 }
 
