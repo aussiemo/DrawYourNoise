@@ -208,6 +208,29 @@ void playAlleMeineEntchen() {
 	playNotes(alleMeineEntchen);
 }
 
+void playBuffer(void* buffer, int bufferSize, int milliseconds) {
+	// TODO(mja): pull out function e.g.: play buffer; reuse in playNote
+	alSourcei(g_sources[0], AL_BUFFER, 0);
+	printError(alGetError(), "PlayNote_DetachBuffers");
+	
+	alBufferData(g_buffers[0], 
+					AL_FORMAT_MONO8, 
+					buffer, 
+					bufferSize,
+					g_samplingFrequency);
+		
+	printError(alGetError(), "PlayNote_BufferData");
+		
+	alSourcei(g_sources[0], AL_BUFFER, g_buffers[0]);
+	printError(alGetError(), "PlayNote_BindBuffer");
+		
+	alSourcePlay(g_sources[0]);
+		
+	std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+	alSourceStop(g_sources[0]);
+	std::this_thread::sleep_for(std::chrono::milliseconds(5));
+}
+
 int main(int argc, char* argv[]) {
 	// STUDY(mja): replace this epicness with proper command line parser
 	std::map<std::string, std::string> commandLineOptions;
@@ -240,26 +263,7 @@ int main(int argc, char* argv[]) {
 		testFile.seekg(0, std::ios::beg);
 		testFile.read((char *)fileBytes, bytesCount);
 		
-		// TODO(mja): pull out function e.g.: play buffer; reuse in playNote
-		alSourcei(g_sources[0], AL_BUFFER, 0);
-		printError(alGetError(), "PlayNote_DetachBuffers");
-		
-		alBufferData(g_buffers[0], 
-						AL_FORMAT_MONO8, 
-						(void*)fileBytes, 
-						bytesCount,
-						g_samplingFrequency);
-		
-		printError(alGetError(), "PlayNote_BufferData");
-		
-		alSourcei(g_sources[0], AL_BUFFER, g_buffers[0]);
-		printError(alGetError(), "PlayNote_BindBuffer");
-		
-		alSourcePlay(g_sources[0]);
-		
-		std::this_thread::sleep_for(std::chrono::milliseconds(4000));
-		alSourceStop(g_sources[0]);
-		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+		playBuffer((void*)fileBytes, bytesCount, 4000);
 		
 		delete[] fileBytes;
 	}
