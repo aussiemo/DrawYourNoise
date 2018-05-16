@@ -20,7 +20,7 @@ bool g_doLog = true;
 std::string g_generator = "squareWave";
 
 
-void printError(const ALenum &error, const std::string &context = "default") {
+void printAlError(const ALenum &error, const std::string &context = "default") {
 	if (!g_doLog) {
 		return;
 	}
@@ -88,7 +88,7 @@ ALubyte computeSampleValue(const int &sample, const int &sampleFrequency,
 
 void playBuffer(void* buffer, int bufferSize, int milliseconds) {
 	alSourcei(g_sources[0], AL_BUFFER, 0);
-	printError(alGetError(), "PlayNote_DetachBuffers");
+	printAlError(alGetError(), "PlayNote_DetachBuffers");
 	
 	alBufferData(g_buffers[0], 
 					AL_FORMAT_MONO8, 
@@ -96,10 +96,10 @@ void playBuffer(void* buffer, int bufferSize, int milliseconds) {
 					bufferSize,
 					g_samplingFrequency);
 		
-	printError(alGetError(), "PlayNote_BufferData");
+	printAlError(alGetError(), "PlayNote_BufferData");
 		
 	alSourcei(g_sources[0], AL_BUFFER, g_buffers[0]);
-	printError(alGetError(), "PlayNote_BindBuffer");
+	printAlError(alGetError(), "PlayNote_BindBuffer");
 		
 	alSourcePlay(g_sources[0]);
 		
@@ -176,16 +176,16 @@ void setupOpenAlDeviceWithOneSourceAndOneBuffer() {
 	g_device = alcOpenDevice(0);
 	g_context = alcCreateContext(g_device, 0);
 	alcMakeContextCurrent(g_context);
-	printError(alGetError());
+	printAlError(alGetError());
 
 	alGenBuffers(1, g_buffers);
-	printError(alGetError());
+	printAlError(alGetError());
 	
 	alGenSources(1, g_sources);
-	printError(alGetError());
+	printAlError(alGetError());
 	
 	alSourcei(g_sources[0], AL_LOOPING, AL_TRUE);
-	printError(alGetError());
+	printAlError(alGetError());
 	
 	std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
@@ -195,8 +195,8 @@ void tearDownOpenAl() {
 	
 	alcCloseDevice(g_device);
 	
-	// TODO(mja): printError is based on al-errorCodes, not on alc-errorCodes.
-	printError(alcGetError(g_device), "alcCloseDevice");
+	// TODO(mja): printAlError is based on al-errorCodes, not on alc-errorCodes.
+	printAlError(alcGetError(g_device), "alcCloseDevice");
 	
 }
 
