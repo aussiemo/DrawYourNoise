@@ -228,9 +228,6 @@ void tearDownOpenAl() {
 	if (!closeSucceeded) {
 		std::cout << "closing device failed";
 	}
-	
-	printAlcError(alcGetError(g_device), "alcCloseDevice_post");
-	
 }
 
 void playAlleMeineEntchen() {
