@@ -21,7 +21,7 @@ bool g_doLog = true;
 std::string g_generator = "squareWave";
 
 
-void printError(const ALenum &error, const std::string &context = "default") {
+void printAlError(const ALenum &error, const std::string &context = "default") {
 	if (!g_doLog) {
 		return;
 	}
@@ -50,6 +50,37 @@ void printError(const ALenum &error, const std::string &context = "default") {
 			errorText = "Unknown error";
 	}
 	std::cout << "[" << context << "] Error: " << errorText << "(" << error << ")" <<  std::endl;
+}
+
+void printAlcError(const ALCenum &error, const std::string &context = "default") {
+	if (!g_doLog) {
+		return;
+	}
+	
+	std::string errorText;
+	switch (error) {
+		case ALC_NO_ERROR:
+			errorText = "ALC_NO_ERROR";
+			break;
+		case ALC_INVALID_DEVICE:
+			errorText = "ALC_INVALID_DEVICE";
+			break;
+		case ALC_INVALID_CONTEXT:
+			errorText = "ALC_INVALID_CONTEXT";
+			break;
+		case ALC_INVALID_ENUM:
+			errorText = "ALC_INVALID_ENUM";
+			break;
+		case ALC_INVALID_VALUE:
+			errorText = "ALC_INVALID_VALUE";
+			break;
+		case ALC_OUT_OF_MEMORY:
+			errorText = "ALC_OUT_OF_MEMORY";
+			break;
+		default:
+			errorText = "Unknown error";
+	}
+	std::cout << "[" << context << "] Error: " << errorText << "(" << error << ")" << std::endl; 
 }
 
 ALubyte computeSampleValueSquareWave(const int &sample, const int &samplingFrequency,
@@ -89,7 +120,7 @@ ALubyte computeSampleValue(const int &sample, const int &sampleFrequency,
 
 void playBuffer(void* buffer, int bufferSize, int milliseconds) {
 	alSourcei(g_sources[0], AL_BUFFER, 0);
-	printError(alGetError(), "PlayNote_DetachBuffers");
+	printAlError(alGetError(), "PlayNote_DetachBuffers");
 	
 	alBufferData(g_buffers[0], 
 					AL_FORMAT_MONO8, 
@@ -97,10 +128,10 @@ void playBuffer(void* buffer, int bufferSize, int milliseconds) {
 					bufferSize,
 					g_samplingFrequency);
 		
-	printError(alGetError(), "PlayNote_BufferData");
+	printAlError(alGetError(), "PlayNote_BufferData");
 		
 	alSourcei(g_sources[0], AL_BUFFER, g_buffers[0]);
-	printError(alGetError(), "PlayNote_BindBuffer");
+	printAlError(alGetError(), "PlayNote_BindBuffer");
 		
 	alSourcePlay(g_sources[0]);
 		
@@ -172,33 +203,32 @@ void playNotes(const std::vector<Note> &notes) {
 }
 
 void setupOpenAlDeviceWithOneSourceAndOneBuffer() {
-	alGetError();
+	alcGetError(g_device);
 	
 	g_device = alcOpenDevice(0);
 	g_context = alcCreateContext(g_device, 0);
 	alcMakeContextCurrent(g_context);
-	printError(alGetError());
+	printAlcError(alcGetError(g_device), "alcOpenDevice");
 
 	alGenBuffers(1, g_buffers);
-	printError(alGetError());
+	printAlError(alGetError());
 	
 	alGenSources(1, g_sources);
-	printError(alGetError());
+	printAlError(alGetError());
 	
 	alSourcei(g_sources[0], AL_LOOPING, AL_TRUE);
-	printError(alGetError());
+	printAlError(alGetError());
 	
 	std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 
 void tearDownOpenAl() {
-	alcGetError(g_device);
-	
-	alcCloseDevice(g_device);
-	
-	// TODO(mja): printError is based on al-errorCodes, not on alc-errorCodes.
-	//printError(alcGetError(g_device), "alcCloseDevice");
-	
+	printAlcError(alcGetError(g_device), "alcCloseDevice_pre");
+    
+	ALCboolean closeSucceeded = alcCloseDevice(g_device);
+	if (!closeSucceeded) {
+		std::cout << "closing device failed";
+	}
 }
 
 void playAlleMeineEntchen() {
