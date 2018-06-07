@@ -10,6 +10,7 @@
 #include <cassert>
 #include <vector>
 #include <fstream>
+#include <cstdint>
 
 ALCdevice *g_device = nullptr;
 ALCcontext *g_context = nullptr;
@@ -196,7 +197,7 @@ void tearDownOpenAl() {
 	alcCloseDevice(g_device);
 	
 	// TODO(mja): printError is based on al-errorCodes, not on alc-errorCodes.
-	printError(alcGetError(g_device), "alcCloseDevice");
+	//printError(alcGetError(g_device), "alcCloseDevice");
 	
 }
 
@@ -210,6 +211,12 @@ void playAlleMeineEntchen() {
 	};
 	playNotes(alleMeineEntchen);
 }
+
+struct RGB {
+    std::uint8_t r;
+    std::uint8_t g;
+    std::uint8_t b;
+};
 
 int main(int argc, char* argv[]) {
 	// STUDY(mja): replace this epicness with proper command line parser
@@ -246,6 +253,68 @@ int main(int argc, char* argv[]) {
 		playBuffer((void*)fileBytes, bytesCount, 4000);
 		
 		delete[] fileBytes;
+	}
+	
+	if (commandLineOptions.find("-playBitmap") != commandLineOptions.end()) {
+		auto fileName = commandLineOptions["-playBitmap"];
+		std::ifstream bmpFile(fileName, std::ios::binary);
+		std::cout << "File is open: " << std::boolalpha << bmpFile.is_open() << std::endl;
+		
+        // compute file size in bytes
+        bmpFile.seekg(0, bmpFile.end);
+        int length = bmpFile.tellg();
+        bmpFile.seekg(0, bmpFile.beg);
+        std::cout << "File size: " << length << std::endl;
+		
+		// Header
+		std::uint16_t type = 0;
+		std::uint32_t sizeInBytes = 0;
+		std::uint32_t reserved_1 = 0;
+		std::uint32_t dataOffset = 0;
+        
+        bmpFile.read((char*)&type, sizeof(type)); // should be 16973
+        bmpFile.read((char*)&sizeInBytes, sizeof(sizeInBytes));
+        bmpFile.read((char*)&reserved_1, sizeof(reserved_1));
+        bmpFile.read((char*)&dataOffset, sizeof(dataOffset));
+        
+        // Info header
+        std::uint32_t infoHeaderSizeInBytes = 0;
+        std::int32_t width = 0;
+        std::int32_t height = 0;
+        
+        bmpFile.read((char*)&infoHeaderSizeInBytes, sizeof(infoHeaderSizeInBytes));
+        bmpFile.read((char*)&width, sizeof(width));
+        bmpFile.read((char*)&height, sizeof(height));
+		
+        // read pixels
+        // line by line, each line is 4 byte aligned with zero bytes
+        bmpFile.seekg(dataOffset, bmpFile.beg);
+        std::vector<RGB> pixels;
+        const int pad = width % 4;
+        for (int y{}; y < height; ++y) {
+            for (int x{}; x < width; ++x) {
+                RGB rgb;
+                rgb.b = bmpFile.get();
+                rgb.g = bmpFile.get();
+                rgb.r = bmpFile.get();
+                pixels.emplace_back(rgb);
+            }
+            bmpFile.ignore(pad);
+        }
+
+		
+		std::cout << "       Type: " << type << " " << ((char*)&type)[0] << ((char*)&type)[1] << std::endl;
+		std::cout << "SizeInBytes: " << sizeInBytes << std::endl;
+		std::cout << " reserved_1: " << reserved_1 << std::endl;
+		std::cout << " DataOffset: " << dataOffset << std::endl;
+        std::cout << "   infoSize: " << infoHeaderSizeInBytes << std::endl;
+        std::cout << "      width: " << width << std::endl;
+        std::cout << "     height: " << height << std::endl;
+        std::cout << std::endl;
+        std::cout << "pixel count: " << pixels.size() << std::endl;
+        std::cout << "pixel 0 = rgb(" << +pixels[0].r << "," << +pixels[0].g << "," << +pixels[0].b << ")" << std::endl;
+        
+        
 	}
 	
 	tearDownOpenAl();
