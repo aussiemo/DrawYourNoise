@@ -316,6 +316,9 @@ int main(int argc, char* argv[]) {
         bmpFile.read((char*)&width, sizeof(width));
         bmpFile.read((char*)&height, sizeof(height));
 		
+		if (height < 0) height = -height;
+		
+		
         // read pixels
         // line by line, each line is 4 byte aligned with zero bytes
         bmpFile.seekg(dataOffset, bmpFile.beg);
@@ -331,8 +334,8 @@ int main(int argc, char* argv[]) {
             }
             bmpFile.ignore(pad);
         }
-
-		
+        
+        // debug file
 		std::cout << "       Type: " << type << " " << ((char*)&type)[0] << ((char*)&type)[1] << std::endl;
 		std::cout << "SizeInBytes: " << sizeInBytes << std::endl;
 		std::cout << " reserved_1: " << reserved_1 << std::endl;
@@ -343,6 +346,54 @@ int main(int argc, char* argv[]) {
         std::cout << std::endl;
         std::cout << "pixel count: " << pixels.size() << std::endl;
         std::cout << "pixel 0 = rgb(" << +pixels[0].r << "," << +pixels[0].g << "," << +pixels[0].b << ")" << std::endl;
+        
+		// Generate pcmData
+		std::cout << "Generate pcmData" << std::endl;
+		std::vector<ALubyte> pcmData;
+		
+		for (int sample{}; sample < g_samplingFrequency; ++sample) {
+			bool doDebug = sample % 100 == 0;
+			if (doDebug) { std::cout << "Debug sample loop: " << sample << std::endl; }
+			
+			std::vector<ALubyte> sampleValuesForCurrentSample;
+			for (int y{}; y < height; ++y) {
+				//std::cout << "Debug y loop: " << y << std::endl;
+				for (int x{}; x < width; ++x) {
+					// std::cout << "Debug x loop: " << x << std::endl;
+					RGB &rgb = pixels[y*width+x];
+					if (rgb.r == 255 && rgb.g == 255 && rgb.b == 255) {
+						continue;
+					}
+					float signalFrequency = x;
+					if (signalFrequency == 0) {
+						continue;
+					}
+					// std::cout << "Computing sampleValue " << sample << ", " << x << ", " << y << std::endl;
+					// TODO(moritz): Incorporate amplitude, phase and offset to make y, and color significant
+					// TODO(moritz): Optimize loop: 
+					//                 - currently the relevant pixels never change, 
+					//                   collect them first before sampling
+					//                 - presize vectors move up scope, they will be the same size for all samples
+					ALubyte sampleValue = computeSampleValue(sample, g_samplingFrequency, 
+															 signalFrequency, g_generator);
+					sampleValuesForCurrentSample.emplace_back(sampleValue);
+				}
+			}
+			std::uint32_t sum{};
+			for (const auto &sv : sampleValuesForCurrentSample) {
+				sum += sv;
+			}
+			sum /= sampleValuesForCurrentSample.size();
+			assert(sum < 256);
+			pcmData.emplace_back((ALubyte) sum);
+		}
+		
+		// play pcmData
+		std::cout << "Play pcmData from Bitmap" << std::endl;
+		playBuffer((void*) pcmData.data(), g_samplingFrequency, 4000);
+		
+		
+		
         
         
 	}
