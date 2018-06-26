@@ -1,4 +1,6 @@
 .DS_Store
-a.out
+a.out*
 main.exe
 main.obj
+trying/
+.vscode/
