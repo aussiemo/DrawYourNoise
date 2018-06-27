@@ -365,8 +365,8 @@ int main(int argc, char* argv[]) {
         // Generate pcmData
         std::cout << "Generate pcmData" << std::endl;
         std::vector<ALubyte> pcmData;
-        
-        for (int sample{}; sample < g_samplingFrequency; ++sample) {
+        const int sizeFactor = 2;
+        for (int sample{}; sample < g_samplingFrequency*sizeFactor; ++sample) {
             bool doDebug = sample % 100 == 0;
             if (doDebug) { std::cout << "Debug sample loop: " << sample << std::endl; }
             
@@ -384,13 +384,12 @@ int main(int argc, char* argv[]) {
                         continue;
                     }
                     float amplitude = rgb.r / 255.0f;
-                    float phase = y;
+                    float phase = (y/height) * 1.f/signalFrequency; // TODO(moritz): think about phase handling that makes more sense
                     float offset = 0.0f;
                     if (rgb.g || rgb.b) {
                         offset = (1.0f - amplitude) * (1.0f / (rgb.g + rgb.b));
                     }
                     // std::cout << "Computing sampleValue " << sample << ", " << x << ", " << y << std::endl;
-                    // TODO(moritz): Incorporate amplitude, phase and offset to make y, and color significant
                     // TODO(moritz): Optimize loop: 
                     //                 - currently the relevant pixels never change, 
                     //                   collect them first before sampling
@@ -411,8 +410,10 @@ int main(int argc, char* argv[]) {
         
         // play pcmData
         std::cout << "Play pcmData from Bitmap" << std::endl;
-        playBuffer((void*) pcmData.data(), g_samplingFrequency, 4000);
+        playBuffer((void*) pcmData.data(), g_samplingFrequency*sizeFactor, 4000);
         
+        // TODO(moritz): Save generated Data as poor mans .pcm so that
+        //  a generate result can be replayed quickly.
         
         
         
